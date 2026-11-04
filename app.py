@@ -4,7 +4,6 @@ import mysql.connector
 from dotenv import load_dotenv
 
 load_dotenv()
-
 app = Flask(__name__)
 
 def conectar_banco():
@@ -14,6 +13,10 @@ def conectar_banco():
         password=os.getenv("DB_PASSWORD"),
         database=os.getenv("DB_NAME")
     )
+
+@app.route("/")
+def inicio():
+    return "<h1>Bem-Vindo ao Senac Reserva</h1>"
 
 @app.route("/salas")
 def listar_salas():
@@ -34,9 +37,6 @@ def listar_salas():
 
     return render_template("salas.html", salas=salas)
 
-@app.route("/")
-def inicio():
-    return "<h1>Bem-Vindo ao Senac Reserva</h1>"
 
 if __name__ == "__main__":
     app.run(debug=True)
