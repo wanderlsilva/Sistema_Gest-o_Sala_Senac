@@ -1,32 +1,32 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <title>SENAC Reserva - Salas</title>
-</head>
-<body>
+    <head>
+        <meta charset="UTF-8">
+        <title>SENAC RESERVA - SALAS</title>
+    </head>
+    <body>
+        <h1>Salas Cadastradas no Sistema</h1>
 
-    <h1>Salas cadastradas no SENAC</h1>
+        <table border="1">
+            <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Capacidade</th>
+                <th>Tipo</th>
+                <th>Descricao</th>
+                <th>Ativo</th>
+            </tr>
 
-    <table border="1">
-        <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>Capacidade</th>
-            <th>Tipo</th>
-        </tr>
-
-        {% for sala in salas %}
-        <tr>
-            <td>{{ sala.id_sala }}</td>
-            <td>{{ sala.nome }}</td>
-            <td>{{ sala.capacidade }}</td>
-            <td>{{ sala.tipo }}</td>
-        </tr>
-        {% endfor %}
-
-    </table>
-
-</body>
+            {% for sala in salas %}
+            <tr>
+                <td>{{ sala.id_sala }}</td>
+                <td>{{ sala.nome }}</td>
+                <td>{{ sala.capacidade }}</td>
+                <td>{{ sala.tipo }}</td>
+                <td>{{ sala.descricao }}</td>
+                <td>{{ sala.ativa }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </body>
 </html>

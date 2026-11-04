@@ -25,8 +25,8 @@ def listar_salas():
     cursor = conexao.cursor(dictionary=True)
 
     cursor.execute("""
-            SELECT id_sala, nome, capacidade,
-            tipo, descricao, ativa
+            SELECT id_sala, nome, capacidade, tipo,
+            descricao, ativa
             FROM sala
             ORDER BY id_sala
             """)
