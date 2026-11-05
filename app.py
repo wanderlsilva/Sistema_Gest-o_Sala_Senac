@@ -1,5 +1,8 @@
 import os
 from flask import Flask, render_template
+from flask import request, render_template, redirect, flash
+from datetime import date, datetime
+from mysql.connector import Error
 import mysql.connector
 from dotenv import load_dotenv
 
@@ -37,6 +40,41 @@ def listar_salas():
 
     return render_template("salas.html", salas=salas)
 
+USUARIO_TESTE_ID = 1
+
+@app.route("/reservar", methods=["GET", "POST"])
+def reservar():
+    if request.method == "GET":
+        return render_template("reservar.html")
+
+    try:
+        id_sala = int(request.form["id_sala"])
+        data_reserva = date.fromisoformat(
+            request.form["data_reserva"]
+        )
+        hora_inicio = datetime.strptime(
+            request.form["hora_inicio"], "%H:%M"
+        ).time
+        hora_fim = datetime.strptime(
+            request.form["hora_fim"], "%H:%M"
+        ).time
+        finalidade = request.form["finalidade"].strip()
+    except (KeyError, ValueError):
+        flash("Dados Inválidos.", "danger")
+
+        if hora_inicio >= hora_fim:
+            flash("Horário final é inválido", "danger")
+            return redirect ("/reservar")
+
+        if data_reserva < date.today():
+            flash("A data não pode estar no passado.", "danger")
+            return redirect("/reservar")
+
+        if not finalidade or len(finalidade) > 200:
+            flash("Informe uma finalidade válida.", "danger")
+            return redirect("/reservar")
+
+        
 
 if __name__ == "__main__":
     app.run(debug=True)
