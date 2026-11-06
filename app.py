@@ -62,7 +62,7 @@ def reservar():
     except (KeyError, ValueError):
         flash("Dados Inválidos.", "danger")
 
-        if hora_inicio >= hora_fim:
+        if hora_inicio > hora_fim:
             flash("Horário final é inválido", "danger")
             return redirect ("/reservar")
 
@@ -74,7 +74,63 @@ def reservar():
             flash("Informe uma finalidade válida.", "danger")
             return redirect("/reservar")
 
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+        #Verifica se a sala existe e está na ativa
+        cursor.execute("""
+            SELECT id_sala FROM sala
+            WHERE id_sala = %s AND ativa = 1
+            """,(id_sala,))
+
+        if cursor.fetchone() is None:
+            conexao.rollback()
+            flash("Sala indisponivel.", "danger")
+            return redirect("/reservar")
+
+        #Verifica conflito de horário
+        cursor.execute("""
+            SELECT COUNT(*) AS total
+            FROM reserva
+            WHERE id_sala = %s
+                AND data_reserva = %s
+                AND status = 'Confirmada'
+                AND hora_inicio < %s
+                AND hora_fim > %s
+            """, (
+                id_sala, data_reserva, hora_inicio, hora_fim))
+
+        if cursor.fetchone()["total"] > 0:
+            conexao.rollback()
+            flash("Sala já reservada nesse horário.","danger")
+            return redirect("/reservar")
         
+        #Gravar a reserva
+        cursor.execute("""
+            INSERT INTO reserva
+            (id_usuario, id_sala, data_reserva,
+            hora_inicio, hora_fim, finalidade, status)
+            VALUES
+            (%s, %s , %s , %s , %s , %s , %s)""",(
+            USUARIO_TESTE_ID, id_sala, data_reserva,
+            hora_inicio, hora_fim, finalidade, "CONFIRMADA"
+        ))
+        conexao.commit()
+
+        flash("Reserva realizada com sucesso!", "success")
+        return redirect("/reservar")
+
+    except Error:
+        if conexao.in_transaction:
+            conexao.rollback()
+        app.logger.exception("Erro ao salvar a reserva")
+        flash("Erro ao cadastrar a reserva", "danger")
+        return redirect("/reservar")
+
+    finally:
+        cursor.close()
+        conexao.close()
 
 if __name__ == "__main__":
     app.run(debug=True)
