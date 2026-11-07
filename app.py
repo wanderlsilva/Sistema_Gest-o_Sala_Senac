@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template
+from flask import Flask
 from flask import request, render_template, redirect, flash
 from datetime import date, datetime
 from mysql.connector import Error
@@ -54,25 +54,27 @@ def reservar():
         )
         hora_inicio = datetime.strptime(
             request.form["hora_inicio"], "%H:%M"
-        ).time
+        ).time()
         hora_fim = datetime.strptime(
             request.form["hora_fim"], "%H:%M"
-        ).time
+        ).time()
         finalidade = request.form["finalidade"].strip()
+
     except (KeyError, ValueError):
         flash("Dados Inválidos.", "danger")
+        return redirect("/reservar")
 
-        if hora_inicio > hora_fim:
-            flash("Horário final é inválido", "danger")
-            return redirect ("/reservar")
+    if hora_inicio >= hora_fim:
+        flash("Horário final é inválido", "danger")
+        return redirect ("/reservar")
 
-        if data_reserva < date.today():
-            flash("A data não pode estar no passado.", "danger")
-            return redirect("/reservar")
+    if data_reserva < date.today():
+        flash("A data não pode estar no passado.", "danger")
+        return redirect("/reservar")
 
-        if not finalidade or len(finalidade) > 200:
-            flash("Informe uma finalidade válida.", "danger")
-            return redirect("/reservar")
+    if not finalidade or len(finalidade) > 200:
+        flash("Informe uma finalidade válida.", "danger")
+        return redirect("/reservar")
 
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
@@ -95,7 +97,7 @@ def reservar():
             FROM reserva
             WHERE id_sala = %s
                 AND data_reserva = %s
-                AND status = 'Confirmada'
+                AND status = 'CONFIRMADA'
                 AND hora_inicio < %s
                 AND hora_fim > %s
             """, (
