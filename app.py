@@ -8,8 +8,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 app = Flask(__name__)
+app.secret_key = os.environ["FLASK_SECRET_KEY"]
+if not app.secret_key:
+    raise RuntimeError("Configure a CHAVE SECRETA no arquivo .env")
+
+#Usuario Temporario
+USUARIO_TESTE_ID = 1
 
 def conectar_banco():
+#ABRE A CONEXAO COM MYSQL USANDO O ARQUIVO .ENV
     return mysql.connector.connect(
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
@@ -19,28 +26,29 @@ def conectar_banco():
 
 @app.route("/")
 def inicio():
-    return "<h1>Bem-Vindo ao Senac Reserva</h1>"
+    return "<h1>Bem-Vindo ao Sistema de Reserva de Sala do Senac</h1>"
 
 @app.route("/salas")
 def listar_salas():
-    conexao = conectar_banco()
-
-    cursor = conexao.cursor(dictionary=True)
-
-    cursor.execute("""
-            SELECT id_sala, nome, capacidade, tipo,
-            descricao, ativa
-            FROM sala
-            ORDER BY id_sala
-            """)
-
-    salas = cursor.fetchall()
-    cursor.close()
-    conexao.close()
-
-    return render_template("salas.html", salas=salas)
-
-USUARIO_TESTE_ID = 1
+    conexao = None
+    cursor = None
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+        cursor.execute("""
+                SELECT id_sala, nome, capacidade, tipo,
+                descricao, ativa
+                FROM sala
+                ORDER BY id_sala
+                """)
+        salas = cursor.fetchall()
+        return render_template("salas.html", salas=salas)
+    except Error:
+        app.logger.exception("Falha ao consultar salas")
+        return render_template('erro.html', mensagem="Não foi possivel consultar as salas"), 500
+    finally:
+        if cursor: cursor.close()
+        if conexao and conexao.is_connected(): conexao.close()
 
 @app.route("/reservar", methods=["GET", "POST"])
 def reservar():
@@ -97,11 +105,11 @@ def reservar():
             FROM reserva
             WHERE id_sala = %s
                 AND data_reserva = %s
-                AND status = 'CONFIRMADA'
+                AND status = 'Confirmada'
                 AND hora_inicio < %s
                 AND hora_fim > %s
             """, (
-                id_sala, data_reserva, hora_inicio, hora_fim))
+                id_sala, data_reserva, hora_fim, hora_inicio))
 
         if cursor.fetchone()["total"] > 0:
             conexao.rollback()
