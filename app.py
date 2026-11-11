@@ -39,6 +39,7 @@ def inicio():
     return "<h1>Bem-Vindo ao Sistema de Reserva de Sala do Senac</h1>"
 
 @app.route("/salas")
+@login_obrigatorio
 def listar_salas():
     conexao = None
     cursor = None
@@ -193,7 +194,7 @@ def login():
         cursor = conexao.cursor(dictionary=True)
 
         cursor.execute("""
-                SELECT id_usuario, nome, senha id_perfil
+                SELECT id_usuario, nome, email, senha, id_perfil
                 FROM usuario
                 WHERE email = %s
                 AND ativo = 1""", (email,))
@@ -201,7 +202,7 @@ def login():
         usuario = cursor.fetchone()
 
         if not usuario or not check_password_hash(
-            usuario ["senha"], senha
+            usuario["senha"], senha
         ):
             flash("E-mail ou senha inválidos.", "danger")
             return redirect(url_for("login"))
