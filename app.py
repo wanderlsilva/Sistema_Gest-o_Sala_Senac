@@ -117,7 +117,7 @@ def reservar():
             return redirect("/reservar")
 
         #Confere se o usuario temporario existe
-        cursor.execute('SELECT id_usuario FROM usuario WHERE id_usuario = %s AND ativo = 1', (USUARIO_TESTE_ID))
+        cursor.execute('SELECT id_usuario FROM usuario WHERE id_usuario = %s AND ativo = 1', (USUARIO_TESTE_ID,))
         if cursor.fetchone() is None:
             conexao.rollback()
             flash("Usuario de teste não cadastrado.")
