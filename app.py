@@ -162,5 +162,9 @@ def reservar():
         cursor.close()
         conexao.close()
 
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    return render_template("login.html")
+
 if __name__ == "__main__":
     app.run(debug=os.getenv('FLASK_DEBUG') == '1')
