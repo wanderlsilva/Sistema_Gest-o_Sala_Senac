@@ -116,6 +116,13 @@ def reservar():
             flash("Sala inexistente ou inativa.", "danger")
             return redirect("/reservar")
 
+        #Confere se o usuario temporario existe
+        cursor.execute('SELECT id_usuario FROM usuario WHERE id_usuario = %s AND ativo = 1', (USUARIO_TESTE_ID))
+        if cursor.fetchone() is None:
+            conexao.rollback()
+            flash("Usuario de teste não cadastrado.")
+            return redirect("/reservar")
+        
         #Verifica conflito de horário
         cursor.execute("""
             SELECT COUNT(*) AS total
@@ -127,13 +134,12 @@ def reservar():
                 AND hora_fim > %s
             """, (
                 id_sala, data_reserva, hora_fim, hora_inicio))
-
         if cursor.fetchone()["total"] > 0:
             conexao.rollback()
-            flash("Sala já reservada nesse horário.","danger")
+            flash("Sala já reservada nesse horário.","warning")
             return redirect("/reservar")
         
-        #Gravar a reserva
+        #Salva a reserva
         cursor.execute("""
             INSERT INTO reserva
             (id_usuario, id_sala, data_reserva,
@@ -141,23 +147,20 @@ def reservar():
             VALUES
             (%s, %s , %s , %s , %s , %s , %s)""",(
             USUARIO_TESTE_ID, id_sala, data_reserva,
-            hora_inicio, hora_fim, finalidade, "CONFIRMADA"
+            hora_inicio, hora_fim, finalidade, "Confirmada"
         ))
         conexao.commit()
-
         flash("Reserva realizada com sucesso!", "success")
         return redirect("/reservar")
-
     except Error:
         if conexao.in_transaction:
             conexao.rollback()
         app.logger.exception("Erro ao salvar a reserva")
         flash("Erro ao cadastrar a reserva", "danger")
         return redirect("/reservar")
-
     finally:
         cursor.close()
         conexao.close()
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=os.getenv('FLASK_DEBUG') == '1')
