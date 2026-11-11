@@ -53,8 +53,22 @@ def listar_salas():
 @app.route("/reservar", methods=["GET", "POST"])
 def reservar():
     if request.method == "GET":
-        return render_template("reservar.html")
+        conexao = None
+        cursor = None
+        try:
+            conexao = conectar_banco()
+            cursor = conexao.cursor(dictionary=True)
+            cursor.execute('SELECT id_sala, nome FROM sala WHERE ativa = 1 ORDER BY id_sala')
+            salas = cursor.fetchall()
+            return render_template("reservar.html", salas=salas)
+        except Error:
+            app.logger.exception('Falha ao carregar as salas')
+            return render_template('erro.html', mensagem="Não foi possivel carregar o formulário."), 500
+        finally:
+            if cursor: cursor.close()
+            if conexao and conexao.is_connected(): conexao.close()    
 
+    #Lê e valida os dados enviados
     try:
         id_sala = int(request.form["id_sala"])
         data_reserva = date.fromisoformat(
@@ -69,11 +83,11 @@ def reservar():
         finalidade = request.form["finalidade"].strip()
 
     except (KeyError, ValueError):
-        flash("Dados Inválidos.", "danger")
+        flash("Preencha os campos com dados válidos.", "danger")
         return redirect("/reservar")
 
     if hora_inicio >= hora_fim:
-        flash("Horário final é inválido", "danger")
+        flash("Horário final deve ser maior que o inicial", "danger")
         return redirect ("/reservar")
 
     if data_reserva < date.today():
@@ -81,22 +95,25 @@ def reservar():
         return redirect("/reservar")
 
     if not finalidade or len(finalidade) > 200:
-        flash("Informe uma finalidade válida.", "danger")
+        flash("A finalidade deve ter entre 1 e 200 caracteres.", "danger")
         return redirect("/reservar")
 
-    conexao = conectar_banco()
-    cursor = conexao.cursor(dictionary=True)
-
+    conexao = None
+    cursor = None
     try:
-        #Verifica se a sala existe e está na ativa
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+        conexao.start_transaction()
+#Bloqueia a linha da sala durante a transação
+#Todas as operações que alterem reservas seguem este código
         cursor.execute("""
             SELECT id_sala FROM sala
             WHERE id_sala = %s AND ativa = 1
+            FOR UPDATE
             """,(id_sala,))
-
         if cursor.fetchone() is None:
             conexao.rollback()
-            flash("Sala indisponivel.", "danger")
+            flash("Sala inexistente ou inativa.", "danger")
             return redirect("/reservar")
 
         #Verifica conflito de horário
