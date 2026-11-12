@@ -83,6 +83,21 @@ def reservar():
             if cursor: cursor.close()
             if conexao and conexao.is_connected(): conexao.close()    
 
+    if request.method == "GET":
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+
+        try:
+            cursor.execute(""" SELECT id_sala, nome
+                            FROM sala
+                            WHERE ativa = 1
+                            ORDER BY nome""")
+            salas = cursor.fetchall()
+        finally:
+            cursor.close()
+            conexao.close()
+        return render_template("reservar.html", salas=salas)
+    
     #Lê e valida os dados enviados
     try:
         id_sala = int(request.form["id_sala"])
@@ -232,6 +247,42 @@ def logout():
     session.clear()
     flash("Você saiu do sistema.", "info")
     return redirect(url_for("login"))
+
+@app.route("/minhas_reservas")
+@login_obrigatorio
+def minhas_reservas():
+    id_usuario = session["id_usuario"]
+    conexao = None
+    cursor = None
+
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+
+        cursor.execute("""
+                SELECT r.id_reserva, s.nome AS nome_sala,
+                r.data_reserva, r.hora_inicio, r.hora_fim,
+                r.finalidade, r.status 
+                FROM reserva AS r
+                INNER JOIN sala AS s ON r.id_sala = s.id_sala
+                WHERE r.id_usuario = %s
+                ORDER BY 
+                r.data_reserva DESC,
+                r.hora_inicio DESC""", (id_usuario,))
+
+        reservas = cursor.fetchall()
+        return render_template("minhas_reservas.html", reservas=reservas)
+    
+    except Exception:
+        app.logger.exception("Erro ao consultar reservas")
+        flash("Não foi possivel consultar suas reservas.", "danger")
+        return redirect(url_for("salas"))
+    
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conexao is not None:
+            conexao.close()
 
 if __name__ == "__main__":
     app.run(debug=os.getenv('FLASK_DEBUG') == '1')

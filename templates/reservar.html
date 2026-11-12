@@ -15,50 +15,53 @@
             <form action="/reservar" method="POST">
 
                 <div class="mb-3">
-                    <label class="form-label">Sala</label>
-                    <select name="id_sala" class="form-select">
-                        <option value="1" selected>Sala 01</option>
-                         <option value="2" selected>Sala 02</option>
-                         <option value="3" selected>Sala 03</option>
+                    <label class="form-label">Selecione a a sala</label>
+                    <select name="id_sala" 
+                            id="id_sala"
+                            class="form-select"
+                            required>
+                            <option value="">Escolha uma sala</option>
+                            {% for sala in salas %}
+                                <option value="{{ sala.id_sala }}">
+                                    {{ sala.nome }}
+                                </option>
+                            {% endfor %}
                     </select>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Data</label>
+                <div class="col-md-4 mb-3">
+                    <label class="form-label">Data da reserva</label>
                     <input type="date"
                             name="data_reserva"
-                            value="2026-11-12"
                             class="form-control"
                             required>
                 </div>
 
                 <div class="row">
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Início</label>
+                        <label class="form-label">Hora de início</label>
                         <input type="time"
                                 name="hora_inicio"
-                                value="13:00"
                                 class="form-control"
                                 required>
                     </div>
 
                     <div class="col-md-6 mb-3">
-                        <label class="form-label">Término</label>
+                        <label class="form-label">Hora de término</label>
                         <input type="time"
                                 name="hora_fim"
-                                value="17:00"
                                 class="form-control"
                                 required>
                     </div>
                 </div>
                 
                 <div class="mb-3">
-                    <label class="form-label">Finalidade</label>
-                    <input type="text"
-                            name="finalidade"
-                            value="Aula prática de Excel"
-                            class="form-control"
-                            required>
+                    <label class="form-label">Finalidade da reserva</label>
+                    <textarea
+                        name="finalidade"
+                        class="form-control"
+                        rows="3"
+                        required></textarea>
                 </div>
 
                 <button type="submit" class="btn btn-success">
