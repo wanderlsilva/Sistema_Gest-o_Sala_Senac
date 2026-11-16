@@ -61,6 +61,28 @@
                 </div>
         </div>
     </nav>
+
+    <main class="container mt-4">
+        {% with mensagens = 
+            get_flashed_messages(with_categories=true) %}
+
+            {% for categoria, mensagem in mensagens %}
+
+            <div class="alert alert-{{ categoria }}">
+                {{ mensagem }}
+            </div>
+        {% endfor %}
+    {% endwith %}
+
+    {% block conteudo %}
     
+    {% endblock %}
+
+    </main>
+    
+    <script
+  src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js">
+</script>
+
 </body>
 </html>
