@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SENAC Reserva</title>
+     <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet">
+</head>
+<body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('dashboar')}}">
+                SEANC Reserva
+            </a>
+            <button class="navbar-toggler"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#menuPrincipal"
+                    arial-controls="menuPrincipal"
+                    aria-expanded="false"
+                    arial-label="Abrir menu">
+
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="menuPrincipal">
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('dashboard')}}">
+                                Inicio
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link"
+                                href="{{ url_for('listar_salas')}}">
+                                Salas
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link"
+                                href="{{ url_for('reservar')}}">
+                                Nova Reserva
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link"
+                                href="{{ url_for('minhas_reservas')}}">
+                                Minhas Reservas
+                            </a>
+                        </li>
+                    </ul>
+                    <span class="navbar-text text-white me-3">
+                        {{ session.get ('nome', 'Usuário') }}
+                    </span>
+                    <form method="POST" action="{{ url_for ('logout')}}">
+                        <button class="btn btn-outline-light btn-sm">
+                            Sair
+                        </button>
+                    </form>
+                </div>
+        </div>
+    </nav>
+    
+</body>
+</html>
