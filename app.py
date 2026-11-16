@@ -284,5 +284,10 @@ def minhas_reservas():
         if conexao is not None:
             conexao.close()
 
+@app.route("/dashboard")
+@login_obrigatorio
+def dashboard():
+    return render_template("dashboard.html")
+
 if __name__ == "__main__":
     app.run(debug=os.getenv('FLASK_DEBUG') == '1')

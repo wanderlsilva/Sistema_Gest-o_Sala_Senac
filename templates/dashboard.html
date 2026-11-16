@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block conteudo %}
+
+<h2 class="mb-3">Painel de Controle</h2>
+
+<p>
+    Bem-vindo, {{ session.get('nome', 'Usuario') }}
+</p>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <h5 class="card-title">
+                Nova Reserva
+            </h5>
+            <p class="card-text">
+                Agende uma sala para suas atividades.
+            </p>
+            <a href="{{ url_for('reservar')}}" class="btn btn-primary">
+                Fazer Reserva
+            </a>
+        </div>
+    </div>
+</div>
