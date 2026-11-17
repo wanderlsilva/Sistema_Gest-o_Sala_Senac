@@ -1,20 +1,18 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-    <head>
-        <meta charset="UTF-8">
-        <title>SENAC RESERVA - SALAS</title>
-    </head>
-    <body>
-        <h1>Salas Cadastradas no Sistema</h1>
+{% extends "base.html" %}
 
-        <table border="1">
+{% block conteudo %}
+        <h1>Salas Cadastradas no Sistema</h1>
+<div class="border rounded-3 overflow-auto">
+
+        <table class="table table-striped mb-0">
+            <thead>
             <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Capacidade</th>
-                <th>Tipo</th>
-                <th>Descricao</th>
-                <th>Ativo</th>
+                <th scope="col">ID</th>
+                <th scope="col">Nome</th>
+                <th scope="col">Capacidade</th>
+                <th scope="col">Tipo</th>
+                <th scope="col">Descricao</th>
+                <th scope="col">Ativo</th>
             </tr>
 
             {% for sala in salas %}
@@ -27,6 +25,7 @@
                 <td>{{ sala.ativa }}</td>
             </tr>
             {% endfor %}
+            </thead>
         </table>
-    </body>
-</html>
+  {% endblock %}
+</div>
