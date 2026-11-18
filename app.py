@@ -289,5 +289,46 @@ def minhas_reservas():
 def dashboard():
     return render_template("dashboard.html")
 
+@app.route("/reservas/<int:id_reserva>/editar", methods=["GET", "POST"])
+@login_obrigatorio
+def editar_reserva(id_reserva):
+    id_usuario = session["id_usuario"]
+    conexao = None
+    cursor = None
+
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+
+        cursor.execute("""
+                SELECT
+                id_reserva, id_usuario, id_sala, data_reserva,
+                hora_inicio, hora_fim, finalidade, status
+                FROM reserva
+                WHERE id_reserva = %s
+                AND id_usuario = %s
+                AND status = 'Confirmada'
+                """,(id_reserva, id_usuario))
+        reserva = cursor.fetchone()
+
+        if reserva is None:
+            flash("Reserva não encontrada ou sem permissão.", "danger")
+            return redirect( url_for("minhas_reservas"))
+        cursor.execute("""
+                SELECT id_sala, nome
+                FROM sala
+                WHERE ativa = 1
+                ORDER BY nome""")
+        salas = cursor.fetchall()
+
+        if request.method == "GET":
+            return render_template("editar_reserva.html", reserva=reserva, salas=salas)
+
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conexao is not None:
+            conexao.close()
+            
 if __name__ == "__main__":
     app.run(debug=os.getenv('FLASK_DEBUG') == '1')
