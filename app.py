@@ -277,7 +277,7 @@ def minhas_reservas():
     except Exception:
         app.logger.exception("Erro ao consultar reservas")
         flash("Não foi possivel consultar suas reservas.", "danger")
-        return redirect(url_for("salas"))
+        return redirect(url_for("minhas_reservas"))
     
     finally:
         if cursor is not None:
@@ -342,7 +342,7 @@ def editar_reserva(id_reserva):
             hora_inicio,
             hora_fim,
             finalidade
-        ]);
+        ]):
             flash("Preencha todos os campos.", "warning")
             return redirect(request.url)
         try:
@@ -385,7 +385,8 @@ def editar_reserva(id_reserva):
                     data_reserva,
                     hora_fim,
                     hora_inicio,
-                    id_reserva))
+                    id_reserva
+                ))
         resultado = cursor.fetchone()
         if resultado["total"] > 0:
             flash("Já existe uma reserva nesse horário.", "danger")

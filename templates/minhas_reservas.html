@@ -30,6 +30,7 @@
                                 <th>Fim</th>
                                 <th>Finalidade</th>
                                 <th>Status</th>
+                                <th>Ações</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -46,10 +47,21 @@
                                     <span class="badge bg-success">
                                         Confirmada
                                     </span>
+                                    <td>
+                                        <a href="{{ url_for('editar_reserva', id_reserva=reserva.id_reserva)}}"
+                                        class="btn btn-warning btn-sm">
+                                        Editar
+                                        </a>
+                                    </td>
                                     {% else %}
                                     <span class="badge bg-secondary">
                                         {{reserva.status}}
                                     </span>
+                                    <td>
+                                        <span class="text-muted">
+                                            Indisponível
+                                        </span>
+                                    </td>
                                     {% endif %}
                                 </td>
                             </tr>
