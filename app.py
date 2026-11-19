@@ -331,7 +331,7 @@ def editar_reserva(id_reserva):
             return render_template("editar_reserva.html", reserva=reserva, salas=salas)
 
         id_sala = request.form.get("id_sala", type=int)
-        data_reserva = request.form.get("data_resera", "")
+        data_reserva = request.form.get("data_reserva", "")
         hora_inicio = request.form.get("hora_inicio", "")
         hora_fim = request.form.get("hora_fim", "")
         finalidade = request.form.get("finalidade", "").strip()
@@ -376,7 +376,7 @@ def editar_reserva(id_reserva):
                 FROM reserva
                 WHERE id_sala = %s
                 AND data_reserva = %s
-                AND status = %s
+                AND status = 'Confirmada'
                 AND hora_inicio < %s
                 AND hora_fim > %s
                 AND id_reserva <> %s""",
@@ -416,9 +416,10 @@ def editar_reserva(id_reserva):
         flash("Reserva atualizada com sucesso!","success")
         return redirect(url_for("minhas_reservas"))
 
-    except Exception:
+    except Exception as erro:
         if conexao is not None:
             conexao.rollback()
+
         app.logger.exception("Erro ao editar reserva")
         flash("Não foi possivel atualizar a reserva.", "danger")
         return redirect(url_for("minhas_reservas"))
