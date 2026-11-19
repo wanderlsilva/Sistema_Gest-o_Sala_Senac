@@ -7,6 +7,7 @@ import mysql.connector
 from dotenv import load_dotenv
 from werkzeug.security import check_password_hash
 from functools import wraps
+from datetime import timedelta
 
 load_dotenv()
 app = Flask(__name__)
@@ -298,6 +299,7 @@ def editar_reserva(id_reserva):
 
     try:
         conexao = conectar_banco()
+        conexao.start_transaction()
         cursor = conexao.cursor(dictionary=True)
 
         cursor.execute("""
@@ -314,6 +316,7 @@ def editar_reserva(id_reserva):
         if reserva is None:
             flash("Reserva não encontrada ou sem permissão.", "danger")
             return redirect( url_for("minhas_reservas"))
+        
         cursor.execute("""
                 SELECT id_sala, nome
                 FROM sala
@@ -322,13 +325,117 @@ def editar_reserva(id_reserva):
         salas = cursor.fetchall()
 
         if request.method == "GET":
+            reserva["hora_inicio"] = formatar_hora(reserva["hora_inicio"])
+            reserva["hora_fim"] = formatar_hora(reserva["hora_fim"])
+
             return render_template("editar_reserva.html", reserva=reserva, salas=salas)
 
+        id_sala = request.form.get("id_sala", type=int)
+        data_reserva = request.form.get("data_resera", "")
+        hora_inicio = request.form.get("hora_inicio", "")
+        hora_fim = request.form.get("hora_fim", "")
+        finalidade = request.form.get("finalidade", "").strip()
+
+        if not all([
+            id_sala,
+            data_reserva,
+            hora_inicio,
+            hora_fim,
+            finalidade
+        ]);
+            flash("Preencha todos os campos.", "warning")
+            return redirect(request.url)
+        try:
+            data_obj = date.fromisoformat(data_reserva)
+            inicio_ojb = datetime.strptime(hora_inicio, "%H:%M").time()
+            fim_obj = datetime.strptime(hora_fim, "%H:%M").time()
+        except ValueError:
+            flash("Data ou horário inválido.", "danger")
+            return redirect(request.url)
+        if data_obj < date.today():
+            flash("Não é permitido reservar datas passadas.", "warning")
+            return redirect(request.url)
+        if inicio_ojb >= fim_obj:
+            flash("A hora inicial deve ser menor que a final.", "warning")
+            return redirect(request.url)
+
+        cursor.execute("""
+                    SELECT id_sala
+                    FROM sala
+                    WHERE id_sala = %s
+                    AND ativa = 1
+                    FOR UPDATE""", (id_sala,))
+
+        sala = cursor.fetchone()
+        if sala is None:
+            flash("A sala selecionada está indisponível.", "danger")
+            return redirect(request.url)
+
+        cursor.execute("""
+                SELECT COUNT(*) AS total
+                FROM reserva
+                WHERE id_sala = %s
+                AND data_reserva = %s
+                AND status = %s
+                AND hora_inicio < %s
+                AND hora_fim > %s
+                AND id_reserva <> %s""",
+                (
+                    id_sala,
+                    data_reserva,
+                    hora_fim,
+                    hora_inicio,
+                    id_reserva))
+        resultado = cursor.fetchone()
+        if resultado["total"] > 0:
+            flash("Já existe uma reserva nesse horário.", "danger")
+            return redirect(request.url)
+
+        cursor.execute("""
+            UPDATE reserva
+            SET
+                id_sala = %s,
+                data_reserva = %s,
+                hora_inicio = %s,
+                hora_fim = %s,
+                finalidade = %s
+                WHERE id_reserva = %s
+                AND id_usuario = %s
+                AND status = 'Confirmada'""",
+                (
+                    id_sala,
+                    data_reserva,
+                    hora_inicio,
+                    hora_fim,
+                    finalidade,
+                    id_reserva,
+                    id_usuario
+                ))
+        conexao.commit()
+        flash("Reserva atualizada com sucesso!","success")
+        return redirect(url_for("minhas_reservas"))
+
+    except Exception:
+        if conexao is not None:
+            conexao.rollback()
+        app.logger.exception("Erro ao editar reserva")
+        flash("Não foi possivel atualizar a reserva.", "danger")
+        return redirect(url_for("minhas_reservas"))
+        
     finally:
         if cursor is not None:
             cursor.close()
         if conexao is not None:
             conexao.close()
-            
+
+def formatar_hora(valor):
+    if isinstance(valor, timedelta):
+        total_segundos = int(valor.total_seconds())
+        horas = total_segundos // 3600
+        minutos = (total_segundos % 3600) // 60
+
+        return f"{horas:02d}:{minutos:02d}"
+    return str(valor)[:5] 
+
 if __name__ == "__main__":
     app.run(debug=os.getenv('FLASK_DEBUG') == '1')
