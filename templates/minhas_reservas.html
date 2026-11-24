@@ -38,7 +38,7 @@
                             <tr>
                                 <td>{{reserva.id_reserva}}</td>
                                 <td>{{reserva.nome_sala}}</td>
-                                <td>{{reserva.data_reserva.strftime('%d/%m%Y')}}</td>
+                                <td>{{reserva.data_reserva.strftime('%d/%m/%Y')}}</td>
                                 <td>{{reserva.hora_inicio}}</td>
                                 <td>{{reserva.hora_fim}}</td>
                                 <td>{{reserva.finalidade}}</td>
@@ -52,10 +52,21 @@
                                         class="btn btn-warning btn-sm">
                                         Editar
                                         </a>
+                                        <button
+                                            type="button"
+                                            class="btn btn-danger btn-sm"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#cancelar{{ reserva.id_reserva }}"
+                                            >
+                                            Cancelar
+                                        </button>
                                     </td>
                                     {% else %}
                                     <span class="badge bg-secondary">
                                         {{reserva.status}}
+                                    </span>
+                                    <span class="text-muted">
+                                        Reserva cancelada
                                     </span>
                                     <td>
                                         <span class="text-muted">
@@ -70,6 +81,59 @@
                     </table>
                 </div>
                 {% else %}
+
+                { % for reserva in reservas % }
+
+                { % if reserva.status == 'Confirmada' % }
+                <div class="modal fade"
+                        id="cancelar {{ reserva.id_reserva }}"
+                        tabindex="-1"
+                        aria-hidden="true">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">
+                                        Confirmar cancelamento
+                                    </h5>
+                                    <button
+                                        type="button"
+                                        class="btn-close"
+                                        data-bs-dismiss="modal"
+                                        aria-label="Fechar"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>
+                                        Deseja realmente cancelar a Reserva
+                                        <strong># {{ reserva.id_reserva }}</strong>
+                                    </p>
+                                    <p class="text-muted">
+                                        O registro continuará no histórico
+                                    </p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button
+                                        type="button"
+                                        class="btn btn-secondary"
+                                        data-bs-dismiss="modal"
+                                        >Voltar
+                                    </button>
+                                    <form
+                                        method="POST"
+                                        action="{{ url_for('cancelar_reserva',id_reserva=reserva.id_reserva) }}"
+                                        >
+                                        <button
+                                            type="submit"
+                                            class="btn btn-danger">
+                                            Confirmar cancelamento
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+
                 <div class="alert alert-info">
                     Você ainda não possui reservas cadastradas.
                 </div>

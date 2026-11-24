@@ -439,5 +439,48 @@ def formatar_hora(valor):
         return f"{horas:02d}:{minutos:02d}"
     return str(valor)[:5] 
 
+@app.route("/reservas/<int:id_reserva>/cancelar", methods=["POST"])
+@login_obrigatorio
+def cancelar_reserva(id_reserva):
+    id_usuario = session["id_usuario"]
+
+    conexao = None
+    cursor = None
+
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor()
+
+        cursor.execute("""
+                UPDATE reserva
+                SET status = 'Cancelada'
+                WHERE id_reserva = %s
+                    AND id_usuario = %s
+                    AND status = 'Confirmada'
+                    """, (id_reserva, id_usuario))
+        if cursor.rowcount == 0:
+            conexao.rollback()
+
+            flash("Reserva não encontrada", "warning")
+
+            return redirect( url_for("minhas_reservas"))
+
+        conexao.commit()
+
+        flash("Reserva cancelada com sucesso!", "success")
+        return redirect( url_for("minhas_reservas"))
+
+    except Exception:
+        if conexao is not None:
+            conexao.rollback()
+            app.logger.exception("Erro ao cancelar a reserva")
+            flash("Não foi possivel cancelar a reserva", "danger")
+            return redirect( url_for("minhas_reservas"))
+    finally:
+        if cursor is not None:
+            cursor.close()
+        if conexao is not None:
+            conexao.close()
+            
 if __name__ == "__main__":
     app.run(debug=os.getenv('FLASK_DEBUG') == '1')
