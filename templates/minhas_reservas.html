@@ -2,26 +2,46 @@
 
 {% block conteudo %}
     <div class="container mt-5">
+        
+        <!-- CABEÇALHO DA PÁGINA -->
         <div class="d-flex justify-content-between align-items-center mb-4">
+        
             <h2>Minhas Reservas</h2>
+        
             <a href=" {{ url_for('reservar') }} "
-                class="btn btn-primary">
-                + Nova Reserva
+                    class="btn btn-primary">
+                    + Nova Reserva
             </a>
         </div>
+
+        <!-- Mensagem do Sistema -->
         {% with mensagens = get_flashed_messages(with_categories=true) %}
+
             {% for categoria, mensagem in mensagens %}
+
             <div class="alert alert-{{categoria}}">
+                
                 {{mensagem}}
+            
             </div>
+            
             {% endfor %}
+        
         {% endwith %}
+        
+        <!-- Card Principal -->
         <div class="card shadow-sm">
+
             <div class="card-body">
+
                 {% if reservas %}
+                
                 <div class="table-responsive">
+                
                     <table class="table table-striped table-hover">
+                
                         <thead class="table-dark">
+                
                             <tr>
                                 <th>ID</th>
                                 <th>Sala</th>
@@ -32,9 +52,12 @@
                                 <th>Status</th>
                                 <th>Ações</th>
                             </tr>
+                        
                         </thead>
+                        
                         <tbody>
                             {% for reserva in reservas %}
+                            
                             <tr>
                                 <td>{{reserva.id_reserva}}</td>
                                 <td>{{reserva.nome_sala}}</td>
@@ -42,37 +65,43 @@
                                 <td>{{reserva.hora_inicio}}</td>
                                 <td>{{reserva.hora_fim}}</td>
                                 <td>{{reserva.finalidade}}</td>
+                                
+                                <!-- Coluna Status-->
                                 <td>
                                     {% if reserva.status == 'Confirmada' %}
-                                    <span class="badge bg-success">
-                                        Confirmada
-                                    </span>
-                                    <td>
-                                        <a href="{{ url_for('editar_reserva', id_reserva=reserva.id_reserva)}}"
-                                        class="btn btn-warning btn-sm">
-                                        Editar
-                                        </a>
-                                        <button
-                                            type="button"
-                                            class="btn btn-danger btn-sm"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#cancelar{{ reserva.id_reserva }}"
-                                            >
-                                            Cancelar
-                                        </button>
-                                    </td>
+                                        <span class="badge bg-success">
+                                            Confirmada
+                                        </span>
                                     {% else %}
-                                    <span class="badge bg-secondary">
-                                        {{reserva.status}}
-                                    </span>
-                                    <span class="text-muted">
-                                        Reserva cancelada
-                                    </span>
-                                    <td>
+                                        <span class="badge bg-secondary">
+                                            {{reserva.status}}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <!--Coluna Ações-->
+                                <td>
+                                    {% if reserva.status == 'Confirmada' %}
+                                        <div class="d-flex gap-2">
+                                            <a href="{{ url_for('editar_reserva', id_reserva=reserva.id_reserva)}}"
+                                            class="btn btn-warning btn-sm">
+                                            Editar
+                                            </a>
+
+                                            <!-- Botão Cancelar-->
+                                            <button
+                                                type="button"
+                                                class="btn btn-danger btn-sm"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#cancelar{{ reserva.id_reserva }}"
+                                                >
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    {% else %}
                                         <span class="text-muted">
                                             Indisponível
                                         </span>
-                                    </td>
                                     {% endif %}
                                 </td>
                             </tr>
@@ -80,69 +109,123 @@
                         </tbody>
                     </table>
                 </div>
-                {% else %}
 
-                { % for reserva in reservas % }
+            <!-- Modal de Cancelamento -->
+                {% for reserva in reservas %}
 
-                { % if reserva.status == 'Confirmada' % }
+                {% if reserva.status == 'Confirmada' %}
                 <div class="modal fade"
-                        id="cancelar {{ reserva.id_reserva }}"
+                        id="cancelar{{ reserva.id_reserva }}"
                         tabindex="-1"
                         aria-hidden="true">
+                        
                         <div class="modal-dialog">
+                        
                             <div class="modal-content">
+                        
+                                <!-- Cabeçalho do Modal-->
                                 <div class="modal-header">
+                                    
                                     <h5 class="modal-title">
                                         Confirmar cancelamento
                                     </h5>
+                                    
                                     <button
                                         type="button"
                                         class="btn-close"
                                         data-bs-dismiss="modal"
-                                        aria-label="Fechar"></button>
+                                        aria-label="Fechar">
+                                    </button>
                                 </div>
+
+                                <!-- Corpo do Modal -->
                                 <div class="modal-body">
                                     <p>
                                         Deseja realmente cancelar a Reserva
-                                        <strong># {{ reserva.id_reserva }}</strong>
+                                        <strong>#{{ reserva.id_reserva }}</strong>
                                     </p>
+                                    
+                                    <p>
+                                        <strong>Sala:</strong>
+                                        {{ reserva.nome_sala }}
+                                    </p>
+
+                                    <p>
+                                        <strong>Data:</strong>
+                                        {{ reserva.data_reserva.strftime('%d/%m%Y')}}
+                                    </p>
+
+                                    <p>
+                                        <strong>Horário:</strong>
+                                        {{ reserva.hora_inicio}} às {{ reserva.hora_fim}}
+                                    </p>
+
                                     <p class="text-muted">
                                         O registro continuará no histórico
                                     </p>
+
                                 </div>
+
+                                <!-- Rodapé do Modal-->
                                 <div class="modal-footer">
+
                                     <button
                                         type="button"
                                         class="btn btn-secondary"
                                         data-bs-dismiss="modal"
                                         >Voltar
                                     </button>
+
+                                    <!-- Formulário de Cancelamento -->
                                     <form
                                         method="POST"
                                         action="{{ url_for('cancelar_reserva',id_reserva=reserva.id_reserva) }}"
                                         >
+                                        {% if csrf_token is defined %}
+                                            <input
+                                                type="hidden"
+                                                name="csrf_token"
+                                                value="{{ csrf_token() }}">
+                                        {% endif %}
+
                                         <button
                                             type="submit"
                                             class="btn btn-danger">
                                             Confirmar cancelamento
                                         </button>
+
                                     </form>
+
                                 </div>
+
                             </div>
+                        
                         </div>
+
                     </div>
+                    
                     {% endif %}
+                
                     {% endfor %}
 
+                {% else %}
+
+                <!-- Mensagem quando não existir reservas -->
+                
                 <div class="alert alert-info">
                     Você ainda não possui reservas cadastradas.
                 </div>
-                {% endif %}
+            {% endif %}
+
             </div>
+        
         </div>
+
+        <!-- Botão Voltar -->
         <a href="{{ url_for('listar_salas')}}" class="btn btn-outline-secondary mt-3">
             Voltar para salas
         </a>
+        
     </div>
     
 {% endblock %}
