@@ -15,6 +15,10 @@ app.secret_key = os.environ["FLASK_SECRET_KEY"]
 if not app.secret_key:
     raise RuntimeError("Configure a CHAVE SECRETA no arquivo .env")
 
+SUPERUSUARIO = 1
+ADMINISTRATIVO = 2
+DOCENTE = 3
+
 def login_obrigatorio(funcao):
     @wraps(funcao)
     def verificar(*args, **kwargs):
@@ -25,6 +29,24 @@ def login_obrigatorio(funcao):
         return funcao(*args, **kwargs)
 
     return verificar
+
+def perfil_obrigatorio(*perfis_permitidos):
+    def decorador(funcao):
+        @wraps(funcao)
+        def verificar_perfil(*args, **kwargs):
+            #Verificar se o usuario está autenticado
+            if "id_usuario" not in session:
+                flash("Realize o login para continuar.", "warning")
+                return redirect(url_for("login"))
+            #Recupera o perfil do usuário
+            perfil_usuario = session.get("id_perfil")
+            #Verifica se o perfil possui permissão
+            if perfil_usuario not in perfis_permitidos:
+                flash("Você não possui permissão para acessar esta página.", "danger")
+                return redirect(url_for("dashboard"))
+            return funcao(*args, **kwargs)
+        return verificar_perfil
+    return decorador
 
 def conectar_banco():
 #ABRE A CONEXAO COM MYSQL USANDO O ARQUIVO .ENV
@@ -38,6 +60,11 @@ def conectar_banco():
 @app.route("/")
 def inicio():
     return "<h1>Bem-Vindo ao Sistema de Reserva de Sala do Senac</h1>"
+
+@app.route("/administracao")
+@perfil_obrigatorio(SUPERUSUARIO, ADMINISTRATIVO)
+def administracao():
+    return render_template("administracao.html")
 
 @app.route("/salas")
 @login_obrigatorio
