@@ -508,6 +508,49 @@ def cancelar_reserva(id_reserva):
             cursor.close()
         if conexao is not None:
             conexao.close()
+
+@app.route("/todas-reservas")
+@perfil_obrigatorio(SUPERUSUARIO, ADMINISTRATIVO)
+def todas_reservas():
+    conexao = None
+    cursor = None
+    try:
+        conexao = conectar_banco()
+        cursor = conexao.cursor(dictionary=True)
+        cursor.execute("""
+                SELECT
+                    r.id_reserva,
+                    u.nome AS nome_usuario,
+                    s.nome AS nome_sala,
+                    r.data_reserva,
+                    r.hora_inicio,
+                    r.hora_fim,
+                    r.finalidade,
+                    r.status
+                    FROM reserva r
+                    INNER JOIN usuario u
+                        ON r.id_usuario = u.id_usuario
+                    INNER JOIN sala s
+                        ON r.id_sala = s.id_sala
+                    ORDER BY
+                        r.data_reserva DESC,
+                        r.hora_inicio DESC
+                    """)
+        reservas = cursor.fetchall()
+        return render_template("todas_reservas.html", reservas=reservas)
+
+    except Exception:
+        app.logger.exception(
+            "Erro ao consultar todas as reservas.", "danger"
+        )
+        flash("Não foi possivel consultar as reservas.", "danger")
+        return redirect(url_for("dashboard"))
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+        if conexao is not None:
+            conexao.close()
             
 if __name__ == "__main__":
     app.run(debug=os.getenv('FLASK_DEBUG') == '1')

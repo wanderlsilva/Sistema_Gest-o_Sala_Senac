@@ -26,18 +26,23 @@
                 </button>
                 <div class="collapse navbar-collapse" id="menuPrincipal">
                     <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('dashboard')}}">
+                                Inicio
+                            </a>
+                        </li>
                         {% if session.get("id_perfil") in [1, 2] %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('administracao') }}">
                                 Administracao
                             </a>
                         </li>
-                        {% endif %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('dashboard')}}">
-                                Inicio
+                            <a class="nav-link" href="{{ url_for('todas_reservas') }}">
+                                Todas as Reservas
                             </a>
                         </li>
+                        {% endif %}
                         <li class="nav-item">
                             <a class="nav-link"
                                 href="{{ url_for('listar_salas')}}">
