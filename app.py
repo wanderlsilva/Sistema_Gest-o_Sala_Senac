@@ -4,8 +4,9 @@ from flask import (request, render_template, redirect, flash, url_for, session)
 from datetime import date, datetime
 from mysql.connector import Error
 import mysql.connector
+from mysql.connector import IntegrityError
 from dotenv import load_dotenv
-from werkzeug.security import check_password_hash
+from werkzeug.security import (check_password_hash, generate_password_hash)
 from functools import wraps
 from datetime import timedelta
 
@@ -551,6 +552,31 @@ def todas_reservas():
 
         if conexao is not None:
             conexao.close()
-            
+
+@app.route("/usuarios")
+@perfil_obrigatorio(SUPERUSUARIO)
+def listar_usuarios():
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+                SELECT
+                    u.id_usuario,
+                    u.nome,
+                    u.email,
+                    u.ativo,
+                    p.nome AS nome_perfil
+                FROM usuario u
+                INNER JOIN perfil p
+                    ON u.id_perfil = p.id_perfil
+                ORDER BY u.nome
+                """)
+        usuarios = cursor.fetchall()
+        return render_template("usuarios.html", usuarios=usuarios)
+    finally:
+        cursor.close()
+        conexao.close()
+
+
 if __name__ == "__main__":
     app.run(debug=os.getenv('FLASK_DEBUG') == '1')

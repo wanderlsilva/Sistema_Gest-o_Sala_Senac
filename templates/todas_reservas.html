@@ -50,6 +50,10 @@
                                 <span class="badge bg-success">
                                     Confirmada
                                 </span>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    {{ reserva.status }}
+                                </span>
                                 {% endif %}
                             </td>
                         </tr>
