@@ -577,6 +577,67 @@ def listar_usuarios():
         cursor.close()
         conexao.close()
 
+@app.route("/usuarios/cadastrar", method=["GET", "POST"])
+@perfil_obrigatorio
+def cadastrar_usuario():
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
 
+    try:
+        cursor.execute("""
+                SELECT id_perfil, nome
+                FROM perfil
+                ORDER BY id_perfil
+            """)
+        perfis = cursor.fetchall()
+
+        if request.method == "POST":
+            nome = request.form.get("nome", "").strip()
+            email = request.form.get("email", "").strip().lower()
+            senha = request.form.get("senha", "")
+            id_perfil = request.form.get("id_perfil", type=int)
+
+            if not all([nome, email, senha, id_perfil]):
+                flash("Preencha todos os campos", "warning")
+                return redirect(request.url)
+            if len(nome) > 100 or len(email) > 120:
+                flash("Nome ou e-mail muito longo.", "warning")
+                return redirect(request.url)
+            if "@" not in email:
+                flash("Informe um e-mail válido.","warning")
+                return redirect(request.url)
+            if id_perfil not in [
+                p["id_perfil"] for p in perfis
+            ]:
+                flash("Perfil inválido", "warning")
+                return redirect(request.url)
+            if len(senha) < 8:
+                flash("A senha deve possui pelo menos 8 caracteres.", "warning")
+                return redirect(request.url)
+            senha_hash = generate_password_hash(senha)
+
+            cursor.execute("""
+                    INSERT INTO usuario
+                        (id_perfil, nome, email, senha, ativo)
+                    VALUES
+                        (%s, %s, %s, %s, 1)
+                    """, (id_perfil, nome, senha_hash))
+            conexao.commit()
+            flash("Usuário cadastrado com sucesso!","success")
+            return redirect(url_for("lista_usuario"))
+        return render_template("cadastrar_usuario.html", perfis=perfis)
+
+    except IntegrityError as erro:
+        conexao.roolback()
+        if erro.errno == 1062:
+            flash("este e-mail já está cadastrado.","warning")
+        else:
+            app.logger.exception("Erro de integridade")
+            flash("Não foi possivel cadastrar.","danger")
+        return redirect(request.url)
+    finally:
+        cursor.close()
+        conexao.close()
+        
 if __name__ == "__main__":
     app.run(debug=os.getenv('FLASK_DEBUG') == '1')
