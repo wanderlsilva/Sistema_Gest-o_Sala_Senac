@@ -577,8 +577,8 @@ def listar_usuarios():
         cursor.close()
         conexao.close()
 
-@app.route("/usuarios/cadastrar", method=["GET", "POST"])
-@perfil_obrigatorio
+@app.route("/usuarios/cadastrar", methods=["GET", "POST"])
+@perfil_obrigatorio(SUPERUSUARIO)
 def cadastrar_usuario():
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
@@ -638,6 +638,98 @@ def cadastrar_usuario():
     finally:
         cursor.close()
         conexao.close()
-        
+
+@app.route("/usuarios/<int:id_usuario>/editar", methods=["GET", "POST"])
+@perfil_obrigatorio(SUPERUSUARIO)
+def editar_usuario(id_usuario):
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+        cursor.execute("""
+                SELECT id_perfil, nome
+                FROM perfil
+                WHERE id_perfil = 1
+                FOR UPDATE
+            """)
+        cursor.fetchone()
+
+        #Busca o usuario
+        cursor.execute("""
+                SELECT id_usuario, nome, email, id_perfil, ativo
+                FROM usuario
+                WHERE id_usuario = %s""", (id_usuario,))
+        usuario = cursor.fetchone()
+
+        if usuario is None:
+            flash("Usuário não encontrado", "danger")
+            return redirect(url_for("listar_usuarios"))
+
+        #Busca de perfis
+        cursor.execute("""
+                    SELECT id_perfil, nome
+                    FROM perfil
+                    ORDER BY id_perfil
+                    """)
+        perfis = cursor.fetchall()
+
+        if request.method == "POST":
+            nome = request.form.get("nome", "").strip()
+            email = request.form.get("email", "").strip().lower()
+            id_perfil = request.form.get("id_perfil", type=int)
+
+            if not all([nome, email, id_perfil]):
+                flash("Preencha todos os campos", "warning")
+                return redirect(request.url)
+            if len(nome) > 100 or len(email) > 120:
+                flash("Nome ou e-mail muito longo.", "warning")
+                return redirect(request.url)
+            if id_perfil not in [
+                p["id_perfil"] for p in perfis
+            ]:
+                flash("Perfil inválido", "warning")
+                return redirect(request.url)
+            if (id_usuario == session["id_usuario"] and id_perfil != SUPERUSUARIO):
+                flash("Você não pode remever seu próprio perfil.", "warning")
+                return redirect(request.url)
+
+            if(usuario["ativo"] == 1 and usuario["id_perfil"] == SUPERUSUARIO and id_perfil != SUPERUSUARIO):
+                cursor.execute("""
+                        SELECT COUNT(*) AS total
+                        FROM usuario
+                        WHERE id_perfil = 1 AND ativo = 1
+                        """)
+                if cursor.fetchone()["total"] <= 1:
+                    flash("Mantenha pelo menos um SUPERUSUARIO ativo", "warning")
+                    return redirect(request.url)
+
+                cursor.execute("""
+                        UPDATE usuario
+                            SET nome = %s,
+                                email = %s
+                                id_perfil = %s
+                            WHERE id_usuario = %s
+                        """,(nome, email, id_perfil, id_usuario))
+                conexao.commit()
+
+                if id_usuario == session["id_usuario"]:
+                    session["nome"] = nome
+                    flash("Usário atualizado com sucesso!", "success")
+                    return redirect(url_for("listar_usuarios"))
+
+                return render_template("editar_usuario.html", usuario=usuario, perfis=perfis)
+
+    except IntegrityError as erro:
+        conexao.roolback()
+        if erro.errno == 1062:
+            flash("este e-mail já está em uso.","warning")
+        else:
+            app.logger.exception("Erro de integridade")
+            flash("Não foi possivel atualizar.","danger")
+        return redirect(request.url)
+    finally:
+        cursor.close()
+        conexao.close()
+
 if __name__ == "__main__":
     app.run(debug=os.getenv('FLASK_DEBUG') == '1')
