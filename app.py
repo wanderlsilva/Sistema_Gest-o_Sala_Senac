@@ -730,6 +730,59 @@ def editar_usuario(id_usuario):
     finally:
         cursor.close()
         conexao.close()
+@app.route("/usuarios/<int:id_usuario>/status", methods=["POST"])
+@perfil_obrigatorio(SUPERUSUARIO)
+def alterar_status_usuario(id_usuario):
+    if id_usuario == session["id_usuario"]:
+        flash("Você não pode desativar sua própria conta.", "warning")
+        return redirect(url_for("listar_usuarios"))
+
+    conexao = conectar_banco()
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+        cursor.execute("""
+                SELECT id_perfil
+                FROM perfil 
+                WHERE id_perfil = 1
+                FOR UPDATE""")
+        cursor.fetchone()
+
+        cursor.execute("""
+                SELECT ativo, id_perfil
+                FROM usuario
+                WHERE id_usuario = %s
+                """, (id_usuario,))
+        usuario = cursor.fetchone()
+
+        if usuario is None:
+            flash("Usuário não encontrado.","danger")
+            return redirect(url_for("listar_usuarios"))
+        if usuario["ativo"] == 1:
+            novo_status = 0
+        else:
+            novo_status = 1
+
+        if (novo_status == 0 and usuario["id_perfil"] == SUPERUSUARIO):
+            cursor.execute("""
+                    SELECT COUNT(*) AS total
+                    FROM usuario
+                    WHERE id_perfil = 1 AND ativo = 1""")
+            if cursor.fetchone()["total"] <= 1:
+                flash("Não é possivel desativar o ultimo SUPERUSARIO", "warning")
+                return redirect(url_for("listar_usuarios"))
+
+        cursor.execute("""
+                UPDATE usuario
+                SET ativo = %s
+                WHERE id_usuario = %s
+                """,(novo_status, id_usuario))
+        conexao.commit()
+        flash("Status do usuario alterado com sucesso.", "successs")
+        return redirect(url_for("listar_usuarios"))
+    finally:
+        cursor.close()
+        conexao.close()
 
 if __name__ == "__main__":
     app.run(debug=os.getenv('FLASK_DEBUG') == '1')
