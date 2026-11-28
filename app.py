@@ -112,20 +112,6 @@ def reservar():
             if cursor: cursor.close()
             if conexao and conexao.is_connected(): conexao.close()    
 
-    if request.method == "GET":
-        conexao = conectar_banco()
-        cursor = conexao.cursor(dictionary=True)
-
-        try:
-            cursor.execute(""" SELECT id_sala, nome
-                            FROM sala
-                            WHERE ativa = 1
-                            ORDER BY nome""")
-            salas = cursor.fetchall()
-        finally:
-            cursor.close()
-            conexao.close()
-        return render_template("reservar.html", salas=salas)
     
     #Lê e valida os dados enviados
     try:
@@ -212,14 +198,17 @@ def reservar():
         flash("Reserva realizada com sucesso!", "success")
         return redirect("/reservar")
     except Error:
-        if conexao.in_transaction:
+        if conexao is not None and conexao.in_transaction:
             conexao.rollback()
-        app.logger.exception("Erro ao salvar a reserva")
-        flash("Erro ao cadastrar a reserva", "danger")
-        return redirect("/reservar")
+            app.logger.exception("Erro ao salvar a reserva")
+            flash("Erro ao cadastrar a reserva", "danger")
+            return redirect(url_for("reservar"))
     finally:
-        cursor.close()
-        conexao.close()
+        if cursor is not None:
+            cursor.close()
+
+        if conexao is not None:
+            conexao.close()
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -304,8 +293,8 @@ def minhas_reservas():
     
     except Exception:
         app.logger.exception("Erro ao consultar reservas")
-        flash("Não foi possivel consultar suas reservas.", "danger")
-        return redirect(url_for("minhas_reservas"))
+        flash("Não foi possível consultar suas reservas.", "danger")
+        return redirect(url_for("dashboard"))
     
     finally:
         if cursor is not None:
@@ -542,8 +531,7 @@ def todas_reservas():
 
     except Exception:
         app.logger.exception(
-            "Erro ao consultar todas as reservas.", "danger"
-        )
+            "Erro ao consultar todas as reservas.")
         flash("Não foi possivel consultar as reservas.", "danger")
         return redirect(url_for("dashboard"))
     finally:
@@ -621,14 +609,14 @@ def cadastrar_usuario():
                         (id_perfil, nome, email, senha, ativo)
                     VALUES
                         (%s, %s, %s, %s, 1)
-                    """, (id_perfil, nome, senha_hash))
+                    """, (id_perfil, nome, email, senha_hash))
             conexao.commit()
             flash("Usuário cadastrado com sucesso!","success")
-            return redirect(url_for("lista_usuario"))
+            return redirect(url_for("lista_usuarios"))
         return render_template("cadastrar_usuario.html", perfis=perfis)
 
     except IntegrityError as erro:
-        conexao.roolback()
+        conexao.rollback()
         if erro.errno == 1062:
             flash("este e-mail já está cadastrado.","warning")
         else:
@@ -639,97 +627,193 @@ def cadastrar_usuario():
         cursor.close()
         conexao.close()
 
-@app.route("/usuarios/<int:id_usuario>/editar", methods=["GET", "POST"])
+
+@app.route("/usuarios/<int:id_usuario>/editar",
+           methods=["GET", "POST"])
 @perfil_obrigatorio(SUPERUSUARIO)
 def editar_usuario(id_usuario):
+
     conexao = conectar_banco()
     cursor = conexao.cursor(dictionary=True)
 
     try:
-        cursor.execute("""
-                SELECT id_perfil, nome
+
+        if request.method == "POST":
+
+            cursor.execute("""
+                SELECT id_perfil
                 FROM perfil
                 WHERE id_perfil = 1
                 FOR UPDATE
             """)
-        cursor.fetchone()
 
-        #Busca o usuario
+            cursor.fetchone()
+
+        # Busca o usuário
         cursor.execute("""
-                SELECT id_usuario, nome, email, id_perfil, ativo
-                FROM usuario
-                WHERE id_usuario = %s""", (id_usuario,))
+            SELECT id_usuario, nome, email,
+                   id_perfil, ativo
+            FROM usuario
+            WHERE id_usuario = %s
+        """, (id_usuario,))
+
         usuario = cursor.fetchone()
 
         if usuario is None:
-            flash("Usuário não encontrado", "danger")
+
+            flash("Usuário não encontrado.", "danger")
+
             return redirect(url_for("listar_usuarios"))
 
-        #Busca de perfis
+        # Busca os perfis
         cursor.execute("""
-                    SELECT id_perfil, nome
-                    FROM perfil
-                    ORDER BY id_perfil
-                    """)
+            SELECT id_perfil, nome
+            FROM perfil
+            ORDER BY id_perfil
+        """)
+
         perfis = cursor.fetchall()
 
         if request.method == "POST":
+
             nome = request.form.get("nome", "").strip()
-            email = request.form.get("email", "").strip().lower()
-            id_perfil = request.form.get("id_perfil", type=int)
+
+            email = request.form.get(
+                "email", ""
+            ).strip().lower()
+
+            id_perfil = request.form.get(
+                "id_perfil", type=int
+            )
 
             if not all([nome, email, id_perfil]):
-                flash("Preencha todos os campos", "warning")
+
+                flash("Preencha todos os campos.", "warning")
+
                 return redirect(request.url)
+
             if len(nome) > 100 or len(email) > 120:
+
                 flash("Nome ou e-mail muito longo.", "warning")
+
                 return redirect(request.url)
+
+            if "@" not in email:
+
+                flash("Informe um e-mail válido.", "warning")
+
+                return redirect(request.url)
+
             if id_perfil not in [
                 p["id_perfil"] for p in perfis
             ]:
-                flash("Perfil inválido", "warning")
-                return redirect(request.url)
-            if (id_usuario == session["id_usuario"] and id_perfil != SUPERUSUARIO):
-                flash("Você não pode remever seu próprio perfil.", "warning")
+
+                flash("Perfil inválido.", "warning")
+
                 return redirect(request.url)
 
-            if(usuario["ativo"] == 1 and usuario["id_perfil"] == SUPERUSUARIO and id_perfil != SUPERUSUARIO):
+            # Impede alteração do próprio perfil
+            if (
+                id_usuario == session["id_usuario"]
+                and id_perfil != SUPERUSUARIO
+            ):
+
+                flash(
+                    "Você não pode remover seu próprio perfil.",
+                    "warning"
+                )
+
+                return redirect(request.url)
+
+            # Preserva o último Super Usuário
+            if (
+                usuario["ativo"] == 1
+                and usuario["id_perfil"] == SUPERUSUARIO
+                and id_perfil != SUPERUSUARIO
+            ):
+
                 cursor.execute("""
-                        SELECT COUNT(*) AS total
-                        FROM usuario
-                        WHERE id_perfil = 1 AND ativo = 1
-                        """)
+                    SELECT COUNT(*) AS total
+                    FROM usuario
+                    WHERE id_perfil = 1
+                    AND ativo = 1
+                """)
+
                 if cursor.fetchone()["total"] <= 1:
-                    flash("Mantenha pelo menos um SUPERUSUARIO ativo", "warning")
+
+                    flash(
+                        "Mantenha pelo menos um Super Usuário ativo.",
+                        "warning"
+                    )
+
                     return redirect(request.url)
 
-                cursor.execute("""
-                        UPDATE usuario
-                            SET nome = %s,
-                                email = %s
-                                id_perfil = %s
-                            WHERE id_usuario = %s
-                        """,(nome, email, id_perfil, id_usuario))
-                conexao.commit()
+            # ATENÇÃO: UPDATE FORA DO IF ANTERIOR
+            cursor.execute("""
+                UPDATE usuario
+                SET nome = %s,
+                    email = %s,
+                    id_perfil = %s
+                WHERE id_usuario = %s
+            """, (
+                nome,
+                email,
+                id_perfil,
+                id_usuario
+            ))
 
-                if id_usuario == session["id_usuario"]:
-                    session["nome"] = nome
-                    flash("Usário atualizado com sucesso!", "success")
-                    return redirect(url_for("listar_usuarios"))
+            conexao.commit()
 
-                return render_template("editar_usuario.html", usuario=usuario, perfis=perfis)
+            if id_usuario == session["id_usuario"]:
+
+                session["nome"] = nome
+
+            flash(
+                "Usuário atualizado com sucesso!",
+                "success"
+            )
+
+            return redirect(url_for("listar_usuarios"))
+
+        # Retorno para requisição GET
+        return render_template(
+            "editar_usuario.html",
+            usuario=usuario,
+            perfis=perfis
+        )
 
     except IntegrityError as erro:
-        conexao.roolback()
+
+        conexao.rollback()
+
         if erro.errno == 1062:
-            flash("este e-mail já está em uso.","warning")
+
+            flash("Este e-mail já está em uso.", "warning")
+
         else:
+
             app.logger.exception("Erro de integridade")
-            flash("Não foi possivel atualizar.","danger")
+
+            flash("Não foi possível atualizar.", "danger")
+
         return redirect(request.url)
+
+    except Error:
+
+        conexao.rollback()
+
+        app.logger.exception("Erro ao editar usuário")
+
+        flash("Erro ao atualizar o usuário.", "danger")
+
+        return redirect(request.url)
+
     finally:
+
         cursor.close()
         conexao.close()
+
+
 @app.route("/usuarios/<int:id_usuario>/status", methods=["POST"])
 @perfil_obrigatorio(SUPERUSUARIO)
 def alterar_status_usuario(id_usuario):
@@ -778,7 +862,7 @@ def alterar_status_usuario(id_usuario):
                 WHERE id_usuario = %s
                 """,(novo_status, id_usuario))
         conexao.commit()
-        flash("Status do usuario alterado com sucesso.", "successs")
+        flash("Status do usuario alterado com sucesso.", "success")
         return redirect(url_for("listar_usuarios"))
     finally:
         cursor.close()
