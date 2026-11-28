@@ -784,5 +784,136 @@ def alterar_status_usuario(id_usuario):
         cursor.close()
         conexao.close()
 
+
+
+@app.route(
+    "/usuarios/<int:id_usuario>/senha",
+    methods=["GET", "POST"]
+)
+@perfil_obrigatorio(SUPERUSUARIO)
+def redefinir_senha(id_usuario):
+
+    conexao = conectar_banco()
+
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+
+        cursor.execute("""
+            SELECT id_usuario, nome
+            FROM usuario
+            WHERE id_usuario = %s
+        """, (id_usuario,))
+
+        usuario = cursor.fetchone()
+
+        if usuario is None:
+
+            flash("Usuário não encontrado.", "danger")
+
+            return redirect(url_for("listar_usuarios"))
+
+        if request.method == "POST":
+
+            senha = request.form.get("senha", "")
+
+            confirmar = request.form.get(
+                "confirmar_senha", ""
+            )
+
+            if len(senha) < 8:
+
+                flash(
+                    "A senha deve ter pelo menos 8 caracteres.",
+                    "warning"
+                )
+
+                return redirect(request.url)
+
+            if senha != confirmar:
+
+                flash("As senhas não coincidem.", "warning")
+
+                return redirect(request.url)
+
+            senha_hash = generate_password_hash(senha)
+
+            cursor.execute("""
+                UPDATE usuario
+                SET senha = %s
+                WHERE id_usuario = %s
+            """, (
+                senha_hash,
+                id_usuario
+            ))
+
+            conexao.commit()
+
+            flash(
+                "Senha redefinida com sucesso!",
+                "success"
+            )
+
+            return redirect(url_for("listar_usuarios"))
+
+        return render_template(
+            "redefinir_senha.html",
+            usuario=usuario
+        )
+
+    finally:
+
+        cursor.close()
+        conexao.close()
+
+
+@app.before_request
+def verificar_usuario_ativo():
+
+    if request.endpoint == "static":
+
+        return
+
+    id_usuario = session.get("id_usuario")
+
+    if id_usuario is None:
+
+        return
+
+    conexao = conectar_banco()
+
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+
+        cursor.execute("""
+            SELECT ativo, id_perfil, nome
+            FROM usuario
+            WHERE id_usuario = %s
+        """, (id_usuario,))
+
+        usuario = cursor.fetchone()
+
+        if usuario is None or usuario["ativo"] == 0:
+
+            session.clear()
+
+            flash(
+                "Sua conta está desativada ou indisponível.",
+                "warning"
+            )
+
+            return redirect(url_for("login"))
+
+        session["id_perfil"] = usuario["id_perfil"]
+
+        session["nome"] = usuario["nome"]
+
+    finally:
+
+        cursor.close()
+        conexao.close()
+
+
 if __name__ == "__main__":
     app.run(debug=os.getenv('FLASK_DEBUG') == '1')

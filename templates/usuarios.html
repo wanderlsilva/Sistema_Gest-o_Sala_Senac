@@ -61,6 +61,30 @@
                                 <a href="{{ url_for("redefinir_senha", id_usuario=usuario.id_usuario )}}" class="btn btn-secondary btn-sm">
                                     Senha
                                 </a>
+
+                                {% if usuario.id_usuario != session["id_usuario"] %}
+                                <form method="POST"
+                                        class="d-inline"
+                                        action="{{ url_for(
+                                            'alterar_status_usuario', id_usuario=usuario.id_usuario
+                                        )}}"
+                                        onsubmit="return confirm('Deseja alterar o status do usuario?')">
+                                    {% if csrf_token is defined %}
+                                    <input type="hidden"
+                                            name="csrf_token"
+                                            value="{{ csrf_token() }}">
+                                    {% endif %}
+                                    {% if usuario.ativo == 1 %}
+                                            <button type="submit" class="btn btn-danger btn-sm">
+                                                Desativar
+                                            </button>
+                                    {% else %}
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                Ativar
+                                            </button>
+                                    {% endif %}
+                                </form>
+                                {% endif %}
                                 
                             </td>
 

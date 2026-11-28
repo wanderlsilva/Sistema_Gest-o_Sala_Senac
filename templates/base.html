@@ -31,6 +31,22 @@
                                 Inicio
                             </a>
                         </li>
+
+                        {% if session.get("id_perfil") == 1 %}
+
+                            <li class="nav-item">
+
+                                <a class="nav-link"
+                                href="{{ url_for('listar_usuarios') }}">
+
+                                    Gerenciar Usuários
+
+                                </a>
+
+                            </li>
+
+                        {% endif %}
+
                         {% if session.get("id_perfil") in [1, 2] %}
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('administracao') }}">

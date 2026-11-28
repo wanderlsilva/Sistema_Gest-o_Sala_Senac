@@ -1,0 +1,83 @@
+
+{% extends "base.html" %}
+
+{% block conteudo %}
+
+<div class="container mt-5">
+
+    <div class="card shadow-sm">
+
+        <div class="card-body">
+
+            <h2>Redefinir Senha</h2>
+
+            <p>Usuário: {{ usuario.nome }}</p>
+
+            <hr>
+
+            <form method="POST">
+
+                {% if csrf_token is defined %}
+                    <input type="hidden"
+                           name="csrf_token"
+                           value="{{ csrf_token() }}">
+                {% endif %}
+
+                <div class="mb-3">
+
+                    <label for="senha" class="form-label">
+                        Nova senha
+                    </label>
+
+                    <input type="password"
+                           id="senha"
+                           name="senha"
+                           class="form-control"
+                           minlength="8"
+                           autocomplete="new-password"
+                           required>
+
+                </div>
+
+                <div class="mb-3">
+
+                    <label for="confirmar_senha"
+                           class="form-label">
+
+                        Confirmar nova senha
+
+                    </label>
+
+                    <input type="password"
+                           id="confirmar_senha"
+                           name="confirmar_senha"
+                           class="form-control"
+                           minlength="8"
+                           autocomplete="new-password"
+                           required>
+
+                </div>
+
+                <button type="submit"
+                        class="btn btn-success">
+
+                    Alterar Senha
+
+                </button>
+
+                <a href="{{ url_for('listar_usuarios') }}"
+                   class="btn btn-secondary">
+
+                    Voltar
+
+                </a>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
